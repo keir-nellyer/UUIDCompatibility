@@ -1,0 +1,4 @@
+name: UUIDCompatibility
+version: ${project.version}
+author: iKeirNez
+main: com.ikeirnez.uuidcompatibility.UUIDCompatibility
