@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.ikeirnez</groupId>
     <artifactId>UUIDCompatibility</artifactId>
-    <version>1.1-SNAPSHOT</version>
+    <version>1.11-SNAPSHOT</version>
     <repositories>
         <repository>
             <id>bukkit-repo</id>
@@ -14,6 +14,10 @@
         <repository>
             <id>ess-repo</id>
             <url>http://repo.ess3.net/content/groups/public</url>
+        </repository>
+        <repository>
+            <id>Plugin Metrics</id>
+            <url>http://repo.mcstats.org/content/repositories/public</url>
         </repository>
     </repositories>
     <build>
@@ -33,6 +37,27 @@
                     <target>1.7</target>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>2.2</version>
+                <executions>
+                    <execution>
+                        <id>include-metrics</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <artifactSet>
+                                <includes>
+                                    <include>org.mcstats.bukkit:metrics</include>
+                                </includes>
+                            </artifactSet>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
     <dependencies>
@@ -47,6 +72,12 @@
             <artifactId>Essentials</artifactId>
             <scope>provided</scope>
             <version>2.14-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>org.mcstats.bukkit</groupId>
+            <artifactId>metrics</artifactId>
+            <version>R8-SNAPSHOT</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 </project>

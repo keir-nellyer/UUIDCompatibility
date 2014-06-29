@@ -6,8 +6,10 @@ import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.mcstats.Metrics;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.UUID;
 
 /**
@@ -23,6 +25,7 @@ public class UUIDCompatibility extends JavaPlugin {
         return instance;
     }
 
+    private Metrics metrics;
     private CustomConfigWrapper nameMappingsWrapper, retrievesWrapper;
 
     {
@@ -86,6 +89,20 @@ public class UUIDCompatibility extends JavaPlugin {
                 getRetrievesWrapper().saveConfig();
             }
         }
+
+        try {
+            metrics = new Metrics(this);
+
+            Metrics.Graph storedGraph = metrics.createGraph("UUIDs <-> Player Names Stored");
+            storedGraph.addPlotter(new Metrics.Plotter() {
+                @Override
+                public int getValue() {
+                    return getNameMappingsWrapper().getConfig().getKeys(false).size();
+                }
+            });
+
+            metrics.start();
+        } catch (IOException e){}
     }
 
     @Override
