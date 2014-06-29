@@ -6,7 +6,7 @@ This plugin uses dangerous code which could potentially break plugins, cause los
 
 ##Requirements
 
-This plugin requires **Java 7**.
+This plugin requires **Java 7** or higher.
 Due to the way the Reflection code is written, it should work on most recent builds of CraftBukkit.
 
 ##How is this any different from similar plugins?
