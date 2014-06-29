@@ -82,6 +82,7 @@ public class LoginListener implements Listener {
                 }, 20L);
 
                 player.setDisplayName(originalName); // set display name for consistency
+                player.setPlayerListName(originalName); // same as above
             } catch (Throwable throwable){
                 UUIDCompatibility.getInstance().getLogger().severe("Something went wrong whilst applying \"hacks\" for player " + pName);
                 throwable.printStackTrace();

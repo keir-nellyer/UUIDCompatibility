@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.ikeirnez</groupId>
     <artifactId>UUIDCompatibility</artifactId>
-    <version>1.11-SNAPSHOT</version>
+    <version>1.12-SNAPSHOT</version>
     <repositories>
         <repository>
             <id>bukkit-repo</id>
