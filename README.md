@@ -20,10 +20,6 @@ Player #1 joins the server with the name "Notch", they then leave the server and
 
 This plugin should be installed ASAP so that it can log as many players usernames as possible, I will soon be adding features to retrieve UUIDs from other sources so that players don't have to join to get their current username logged.
 
-##Why do I see players real names in chat, tab list and such like?
-
-This is due to the players **DISPLAY** name being set to their real name on join, this was done to show a players real name in as many places as possible.
-
 ##I want my plugin to retrieve the players real name
 
 To bypass this plugins username change, you can use the following code to get a players real name
