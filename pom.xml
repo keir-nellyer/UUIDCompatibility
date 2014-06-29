@@ -11,6 +11,10 @@
             <id>bukkit-repo</id>
             <url>http://repo.bukkit.org/content/groups/public/</url>
         </repository>
+        <repository>
+            <id>ess-repo</id>
+            <url>http://repo.ess3.net/content/groups/public</url>
+        </repository>
     </repositories>
     <build>
         <finalName>${project.artifactId}-${project.version}</finalName>
@@ -37,6 +41,12 @@
             <artifactId>craftbukkit</artifactId>
             <scope>provided</scope>
             <version>1.7.9-R0.3-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>net.ess3</groupId>
+            <artifactId>Essentials</artifactId>
+            <scope>provided</scope>
+            <version>2.14-SNAPSHOT</version>
         </dependency>
     </dependencies>
 </project>

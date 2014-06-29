@@ -1,0 +1,9 @@
+# ATTENTION
+# This plugin uses some dangerous code to change a players name
+# As this is not normal behaviour for the Minecraft/Bukkit server and installed plugins, unexpected results could occur
+# We ask that you keep regular backups in the case of this happening
+# The developer(s) of UUIDCompatibility take no responsibility for damage caused by this plugin
+# YOU HAVE BEEN WARNED
+
+# By changing this to true, you show that you have read the above warning
+enabled: false

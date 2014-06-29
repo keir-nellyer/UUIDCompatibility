@@ -1,4 +1,5 @@
 name: UUIDCompatibility
 version: ${project.version}
 author: iKeirNez
+softdepend: [Essentials]
 main: com.ikeirnez.uuidcompatibility.UUIDCompatibility
