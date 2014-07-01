@@ -1,21 +1,38 @@
 package com.ikeirnez.uuidcompatibility;
 
+import javassist.ClassPool;
+import javassist.CtClass;
+import javassist.CtMethod;
+import javassist.util.HotSwapper;
 import net.ess3.api.IEssentials;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.mcstats.Metrics;
 
 import java.io.File;
-import java.io.IOException;
+import java.io.FileInputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 /**
  * Created by iKeirNez on 29/06/2014.
  */
-public class UUIDCompatibility extends JavaPlugin {
+public class UUIDCompatibility extends JavaPlugin implements Listener {
 
     private static UUIDCompatibility instance;
 
@@ -25,7 +42,9 @@ public class UUIDCompatibility extends JavaPlugin {
         return instance;
     }
 
-    private Metrics metrics;
+    private Set<Plugin> nonUpdatedPlugins = new HashSet<>();
+    public Map<UUID, String> playerRealNames = new HashMap<>();
+    private Map<Plugin, List<String>> classNameToPluginMap = new HashMap<>();
     private CustomConfigWrapper nameMappingsWrapper, retrievesWrapper;
 
     {
@@ -34,7 +53,9 @@ public class UUIDCompatibility extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        saveDefaultConfig();
+        PluginManager pluginManager = Bukkit.getPluginManager();
+        getConfig().options().copyDefaults(true);
+        saveConfig();
 
         if (!getConfig().getBoolean("enabled")){
             getLogger().severe("The plugin enabled status has not been set to true in the config, disabling...");
@@ -44,7 +65,32 @@ public class UUIDCompatibility extends JavaPlugin {
 
         nameMappingsWrapper = new CustomConfigWrapper(new File(getDataFolder(), "nameMappings.yml"));
         retrievesWrapper = new CustomConfigWrapper(new File(getDataFolder(), "retrieves.yml"));
-        getServer().getPluginManager().registerEvents(new LoginListener(), this);
+        pluginManager.registerEvents(new UUIDCompatiblityListener(this), this);
+        pluginManager.registerEvents(this, this);
+
+        List<String> allowedList = getConfig().getStringList("showOriginalNameIn.plugins");
+
+        if (allowedList.contains("*")){
+            nonUpdatedPlugins.addAll(Arrays.asList(pluginManager.getPlugins()));
+
+            for (String pluginName : allowedList){
+                if (pluginName.startsWith("-")){
+                    Plugin plugin = pluginManager.getPlugin(pluginName.substring(1, pluginName.length()));
+
+                    if (plugin != null){
+                        nonUpdatedPlugins.remove(plugin);
+                    }
+                }
+            }
+        } else {
+            for (String pluginName : allowedList){
+                Plugin plugin = pluginManager.getPlugin(pluginName);
+
+                if (plugin != null){
+                    nonUpdatedPlugins.add(plugin);
+                }
+            }
+        }
 
         if (!getRetrievesWrapper().getConfig().getBoolean("retrieved.world-data")){
             getLogger().info("Retrieving UUID <-> Names from player dat files, please wait...");
@@ -90,24 +136,144 @@ public class UUIDCompatibility extends JavaPlugin {
             }
         }
 
-        try {
-            metrics = new Metrics(this);
+        getLogger().info("Reading plugin jar files to retrieve class names...");
 
-            Metrics.Graph storedGraph = metrics.createGraph("UUIDs <-> Player Names Stored");
-            storedGraph.addPlotter(new Metrics.Plotter() {
+        for (Plugin plugin : Bukkit.getPluginManager().getPlugins()){
+            if (!allowedList.contains(plugin.getName())){
+                continue;
+            }
+
+            List<String> classNames = new ArrayList<>();
+            File pluginJar = Utils.getJarForPlugin(plugin);
+
+            try {
+                if (pluginJar.getName().endsWith(".jar")){
+                    ZipInputStream zipInputStream = new ZipInputStream(new FileInputStream(pluginJar));
+                    ZipEntry zipEntry = zipInputStream.getNextEntry();
+
+                    while (zipEntry != null){
+                        String entryName = zipEntry.getName();
+
+                        if (!zipEntry.isDirectory() && entryName.endsWith(".class")){
+                            StringBuilder className = new StringBuilder();
+
+                            for (String part : entryName.split("/")){
+                                if (className.length() != 0){
+                                    className.append(".");
+                                }
+
+                                className.append(part);
+
+                                if (part.endsWith(".class")){
+                                    className.setLength(className.length() - ".class".length());
+                                }
+                            }
+
+                            classNames.add(className.toString());
+                        }
+
+                        zipEntry = zipInputStream.getNextEntry();
+                    }
+
+                    classNameToPluginMap.put(plugin, classNames);
+                }
+            } catch (Throwable throwable){
+                getLogger().severe("Error caching class names for plugin " + plugin.getName());
+                throwable.printStackTrace();
+            }
+        }
+
+        try {
+            getLogger().info("Writing modified version of CraftHumanEntity");
+            String craftServerClassName = Bukkit.getServer().getClass().getName();
+            final String className = craftServerClassName.substring(0, craftServerClassName.length() - "CraftServer".length()) + "entity.CraftHumanEntity";
+
+            ClassLoader classLoader = getClass().getClassLoader();
+            Class.forName(className, true, classLoader); // init class so it can be replaced
+
+            ClassPool classPool = ClassPool.getDefault();
+
+            CtClass ctClass = classPool.get(className);
+            CtMethod ctMethod = ctClass.getDeclaredMethod("getName");
+
+            /**
+             * The below code creates a method to return a different name depending on a players UUID
+             * It has to be this complex as the ExternalAccess class is in a different class-loader from CraftBukkit
+             * Class names have full paths so we don't need to import anything
+             * If for some reason we are unable to get a name, it defaults to standard behavior
+             */
+            ctMethod.setBody("{ try { return (String) Class.forName(\"" + ExternalAccess.class.getName() + "\", true, " + Bukkit.class.getName() + ".getPluginManager().getPlugin(\"" + getDescription().getName() + "\").getClass().getClassLoader()).getDeclaredMethod(\"getPlayerName\", new Class[]{" + UUID.class.getName() + ".class}).invoke(null, new Object[]{getUniqueId()}); } catch (" + Throwable.class.getName() + " e) { e.printStackTrace(); return getHandle().getName(); } }");
+            // how was that for a one liner
+
+            getLogger().info("Compiling modified CraftHumanEntity to bytecode");
+            final byte[] classFile = ctClass.toBytecode();
+
+            // the below code was done in a scheduler so that the HotSwapper would use Bukkit's class-loader as there currently isn't a way to define which class-loader is used
+            Bukkit.getScheduler().runTask(this, new Runnable() {
                 @Override
-                public int getValue() {
-                    return getNameMappingsWrapper().getConfig().getKeys(false).size();
+                public void run() {
+                    try {
+                        getLogger().info("HotSwapping in modified version of CraftHumanEntity");
+                        HotSwapper hotSwapper = new HotSwapper(8000);
+                        hotSwapper.reload(className, classFile);
+                    } catch (Throwable throwable){
+                        getLogger().severe("Error hot-swapping CraftHumanEntity class");
+                        throwable.printStackTrace();
+                    }
                 }
             });
-
-            metrics.start();
-        } catch (IOException e){}
+        } catch (Throwable throwable){
+            getLogger().severe("Error applying patch for getName() method");
+            throwable.printStackTrace();
+        }
     }
 
     @Override
     public void onDisable() {
         instance = null;
+    }
+
+    public String getOriginalName(UUID uuid){
+        return getNameMappingsWrapper().getConfig().getString(uuid.toString());
+    }
+
+    public String getRealName(Player player){
+        UUID uuid = player.getUniqueId();
+
+        if (!playerRealNames.containsKey(uuid)){
+            try {
+                Object gameProfile = player.getClass().getDeclaredMethod("getProfile").invoke(player);
+                String realName = (String) gameProfile.getClass().getMethod("getName").invoke(gameProfile);
+                return playerRealNames.put(uuid, realName);
+            } catch (Throwable e){
+                getLogger().severe("Error retrieving real name for " + uuid);
+                e.printStackTrace();
+            }
+        } else {
+            return playerRealNames.get(uuid);
+        }
+
+        return null;
+    }
+
+    public Plugin getPluginFromClass(Class<?> clazz){
+        return getPluginFromClass(clazz.getName());
+    }
+
+    public Plugin getPluginFromClass(String className){
+        for (Plugin plugin : classNameToPluginMap.keySet()){
+            List<String> classNames = classNameToPluginMap.get(plugin);
+
+            if (classNames.contains(className)){
+                return plugin;
+            }
+        }
+
+        return null;
+    }
+
+    public Set<Plugin> getNonUpdatedPlugins() {
+        return nonUpdatedPlugins;
     }
 
     public CustomConfigWrapper getNameMappingsWrapper() {
@@ -117,4 +283,10 @@ public class UUIDCompatibility extends JavaPlugin {
     public CustomConfigWrapper getRetrievesWrapper() {
         return retrievesWrapper;
     }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent e){
+        playerRealNames.remove(e.getPlayer().getUniqueId());
+    }
+
 }

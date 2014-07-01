@@ -28,7 +28,3 @@ To bypass this plugins username change, you can use the following code to get a 
 ```java
 String realName = player.getMetadata("RealName").get(0).asString();
 ```
-
-##Licensing
-
-We're GPL v3, for more details, see [here](LICENSE.txt)

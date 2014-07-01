@@ -7,3 +7,9 @@
 
 # By changing this to true, you show that you have read the above warning
 enabled: false
+
+showOriginalNameIn:
+  displayName: false
+  tabList: false
+  plugins:
+    - GriefPrevention
