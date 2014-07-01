@@ -263,16 +263,16 @@ public class UUIDCompatibility extends JavaPlugin implements Listener {
             try {
                 Object gameProfile = player.getClass().getDeclaredMethod("getProfile").invoke(player);
                 String realName = (String) gameProfile.getClass().getMethod("getName").invoke(gameProfile);
-                return playerRealNames.put(uuid, realName);
+                playerRealNames.put(uuid, realName);
+                return realName;
             } catch (Throwable e){
                 getLogger().severe("Error retrieving real name for " + uuid);
                 e.printStackTrace();
+                return null;
             }
         } else {
             return playerRealNames.get(uuid);
         }
-
-        return null;
     }
 
     public Plugin getPluginFromClass(Class<?> clazz){
