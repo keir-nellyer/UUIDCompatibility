@@ -13,3 +13,4 @@ showOriginalNameIn:
   tabList: false
   plugins:
     - GriefPrevention
+notifyPlayers: true

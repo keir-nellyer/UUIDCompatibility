@@ -1,10 +1,12 @@
 package com.ikeirnez.uuidcompatibility;
 
+import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
@@ -24,17 +26,8 @@ public class UUIDCompatibilityListener implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerLogin(PlayerLoginEvent e){
         FileConfiguration configuration = instance.getConfig();
-        CustomConfigWrapper nameMappingsWrapper = instance.getNameMappingsWrapper();
 
         Player player = e.getPlayer();
-        UUID uuid = player.getUniqueId();
-        String uuidString = uuid.toString();
-
-        if (!nameMappingsWrapper.getConfig().contains(uuidString)){
-            nameMappingsWrapper.getConfig().set(uuidString, instance.getRealName(player));
-            nameMappingsWrapper.saveConfig();
-        }
-
         String pName = player.getName();
 
         if (configuration.getBoolean("showOriginalNameIn.DisplayName")){
@@ -47,8 +40,19 @@ public class UUIDCompatibilityListener implements Listener {
     }
 
     @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent e){
+        Player player = e.getPlayer();
+        String pName = instance.getRealName(player);
+        String originalName = instance.getOriginalName(player);
+
+        if (instance.getConfig().getBoolean("notifyPlayers") && !pName.equals(originalName)){
+            player.sendMessage(UUIDCompatibility.MESSAGE_PREFIX + "Your name is " + ChatColor.GOLD + pName + ChatColor.GREEN + " however some parts of this server may refer to you as " + ChatColor.GOLD + originalName);
+        }
+    }
+
+    @EventHandler
     public void onPlayerQuit(PlayerQuitEvent e){
-        UUIDCompatibility.getInstance().playerRealNames.remove(e.getPlayer().getUniqueId());
+        instance.playerRealNames.remove(e.getPlayer().getUniqueId());
     }
 
 }
