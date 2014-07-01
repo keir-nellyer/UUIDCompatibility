@@ -13,11 +13,11 @@ import java.util.UUID;
 /**
  * Created by iKeirNez on 29/06/2014.
  */
-public class UUIDCompatiblityListener implements Listener {
+public class UUIDCompatibilityListener implements Listener {
 
     private UUIDCompatibility instance;
 
-    public UUIDCompatiblityListener(UUIDCompatibility instance){
+    public UUIDCompatibilityListener(UUIDCompatibility instance){
         this.instance = instance;
     }
 

@@ -66,7 +66,7 @@ public class UUIDCompatibility extends JavaPlugin implements Listener {
 
         nameMappingsWrapper = new CustomConfigWrapper(new File(getDataFolder(), "nameMappings.yml"));
         retrievesWrapper = new CustomConfigWrapper(new File(getDataFolder(), "retrieves.yml"));
-        pluginManager.registerEvents(new UUIDCompatiblityListener(this), this);
+        pluginManager.registerEvents(new UUIDCompatibilityListener(this), this);
         pluginManager.registerEvents(this, this);
 
         List<String> allowedList = getConfig().getStringList("showOriginalNameIn.plugins");
