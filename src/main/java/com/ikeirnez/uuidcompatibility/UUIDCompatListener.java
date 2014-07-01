@@ -10,16 +10,14 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
-import java.util.UUID;
-
 /**
  * Created by iKeirNez on 29/06/2014.
  */
-public class UUIDCompatibilityListener implements Listener {
+public class UUIDCompatListener implements Listener {
 
-    private UUIDCompatibility instance;
+    private UUIDCompat instance;
 
-    public UUIDCompatibilityListener(UUIDCompatibility instance){
+    public UUIDCompatListener(UUIDCompat instance){
         this.instance = instance;
     }
 
@@ -46,7 +44,7 @@ public class UUIDCompatibilityListener implements Listener {
         String originalName = instance.getOriginalName(player);
 
         if (instance.getConfig().getBoolean("notifyPlayers") && !pName.equals(originalName)){
-            player.sendMessage(UUIDCompatibility.MESSAGE_PREFIX + "Your name is " + ChatColor.GOLD + pName + ChatColor.GREEN + " however some parts of this server may refer to you as " + ChatColor.GOLD + originalName);
+            player.sendMessage(UUIDCompat.MESSAGE_PREFIX + "Your name is " + ChatColor.GOLD + pName + ChatColor.GREEN + " however some parts of this server may refer to you as " + ChatColor.GOLD + originalName);
         }
     }
 

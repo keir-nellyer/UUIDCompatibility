@@ -1,4 +1,4 @@
-name: UUIDCompatibility
+name: UUIDCompat
 version: ${project.version}
 author: iKeirNez
 softdepend: [Essentials]
