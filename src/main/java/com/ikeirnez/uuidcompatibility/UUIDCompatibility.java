@@ -203,7 +203,7 @@ public class UUIDCompatibility extends JavaPlugin implements Listener {
              * Class names have full paths so we don't need to import anything
              * If for some reason we are unable to get a name, it defaults to standard behavior
              */
-            ctMethod.setBody("{ try { return (String) Class.forName(\"" + ExternalAccess.class.getName() + "\", true, " + Bukkit.class.getName() + ".getPluginManager().getPlugin(\"" + getDescription().getName() + "\").getClass().getClassLoader()).getDeclaredMethod(\"getPlayerName\", new Class[]{" + UUID.class.getName() + ".class}).invoke(null, new Object[]{getUniqueId()}); } catch (" + Throwable.class.getName() + " e) { e.printStackTrace(); return getHandle().getName(); } }");
+            ctMethod.setBody("{ try { return (String) Class.forName(\"" + ExternalAccess.class.getName() + "\", true, " + Bukkit.class.getName() + ".getPluginManager().getPlugin(\"" + getDescription().getName() + "\").getClass().getClassLoader()).getDeclaredMethod(\"getPlayerName\", new Class[]{" + UUID.class.getName() + ".class}).invoke(null, new Object[]{getUniqueId()}); } catch (" + Throwable.class.getName() + " e) { return getHandle().getName(); } }");
             // how was that for a one liner
 
             getLogger().info("Compiling modified CraftHumanEntity to bytecode");
