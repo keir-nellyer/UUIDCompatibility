@@ -2,7 +2,7 @@
 
 ##WARNING
 
-This plugin uses dangerous code which could potentially have negative side effects, remember to keep regular backups of the server in the case of this ever happening.
+This plugin uses dangerous code which can potentially have negative side effects, remember to keep regular backups of the server in the case of this ever happening.
 
 ##Requirements
 

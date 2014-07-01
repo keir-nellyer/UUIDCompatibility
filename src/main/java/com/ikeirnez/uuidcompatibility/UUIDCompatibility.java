@@ -8,6 +8,7 @@ import net.ess3.api.IEssentials;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -233,8 +234,26 @@ public class UUIDCompatibility extends JavaPlugin implements Listener {
         instance = null;
     }
 
-    public String getOriginalName(UUID uuid){
-        return getNameMappingsWrapper().getConfig().getString(uuid.toString());
+    public String getOriginalName(Player player){
+        FileConfiguration nameMappings = getNameMappingsWrapper().getConfig();
+        UUID uuid = player.getUniqueId();
+        String uuidString = uuid.toString();
+
+        if (!nameMappings.contains(uuidString)){
+            String realName = getRealName(player);
+            String newRealName = realName;
+            int numberSuffix = 1;
+
+            while (Utils.containsValue(nameMappings, newRealName)){
+                newRealName = realName + "_" + numberSuffix++;
+            }
+
+            nameMappings.set(uuidString, newRealName);
+            getNameMappingsWrapper().saveConfig();
+            return newRealName;
+        }
+
+        return nameMappings.getString(uuidString);
     }
 
     public String getRealName(Player player){
