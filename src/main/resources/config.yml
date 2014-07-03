@@ -5,12 +5,16 @@
 # The developer(s) of UUIDCompatibility take no responsibility for damage caused by this plugin
 # YOU HAVE BEEN WARNED
 
-# By changing this to true, you show that you have read the above warning
+# By changing this value to true, you show that you have read the above warning
 enabled: false
 
 showOriginalNameIn:
+  # Show original name as display name
   displayName: false
+  # Show original name in tab list
   tabList: false
+  # Plugins which should be given UUID compatibility (tricked into thinking a players name is their original name)
   plugins:
     - GriefPrevention
+# When a player joins and their username differs from their original name, should they be notified?
 notifyPlayers: true
