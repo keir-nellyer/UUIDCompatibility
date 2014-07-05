@@ -7,26 +7,6 @@ This plugin uses dangerous code which can potentially have negative side effects
 ##Requirements
 
 * **Java 7** or higher.
-* The server must be started using the following arguments:
-
-    ```
-    -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8000
-    ```
-  
-    For Example, old startup script:
-  
-    ```
-    java -jar spigot.jar
-    ```
-    
-    New startup script:
-  
-    ```
-    java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8000 -jar spigot.jar
-    ```
-
-    This is required so that this plugin can inject some code to make the whole thing work.
-
 * Due to the way the Reflection code is written, it should work on most recent builds of CraftBukkit.
 
 ##How is this any different from similar plugins?
