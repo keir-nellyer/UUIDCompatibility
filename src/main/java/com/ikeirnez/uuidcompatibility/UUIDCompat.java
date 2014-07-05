@@ -3,22 +3,20 @@ package com.ikeirnez.uuidcompatibility;
 import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.CtMethod;
-import javassist.util.HotSwapper;
 import net.ess3.api.IEssentials;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -43,17 +41,18 @@ public class UUIDCompat extends JavaPlugin implements Listener {
         return instance;
     }
 
-    private Set<Plugin> nonUpdatedPlugins = new HashSet<>();
+    private Set<Plugin> compatibilityPlugins = new HashSet<>();
     public Map<UUID, String> playerRealNames = new HashMap<>();
     private Map<Plugin, List<String>> classNameToPluginMap = new HashMap<>();
     private CustomConfigWrapper nameMappingsWrapper, retrievesWrapper;
+    private boolean debug = false;
 
     {
         instance = this;
     }
 
     @Override
-    public void onEnable() {
+    public void onLoad() {
         PluginManager pluginManager = Bukkit.getPluginManager();
         getConfig().options().copyDefaults(true);
         saveConfig();
@@ -64,34 +63,122 @@ public class UUIDCompat extends JavaPlugin implements Listener {
             return;
         }
 
+        debug = getConfig().getBoolean("debug");
+        debug("Debugging is now enabled");
         nameMappingsWrapper = new CustomConfigWrapper(new File(getDataFolder(), "nameMappings.yml"));
         retrievesWrapper = new CustomConfigWrapper(new File(getDataFolder(), "retrieves.yml"));
-        pluginManager.registerEvents(new UUIDCompatListener(this), this);
-        pluginManager.registerEvents(this, this);
 
-        List<String> allowedList = getConfig().getStringList("showOriginalNameIn.plugins");
+        debug("Calculating plugins to enable UUID compatibility for");
+        List<String> pluginList = getConfig().getStringList("showOriginalNameIn.plugins");
 
-        if (allowedList.contains("*")){
-            nonUpdatedPlugins.addAll(Arrays.asList(pluginManager.getPlugins()));
+        if (pluginList.contains("*")){
+            compatibilityPlugins.addAll(Arrays.asList(pluginManager.getPlugins()));
 
-            for (String pluginName : allowedList){
+            for (String pluginName : pluginList){
                 if (pluginName.startsWith("-")){
                     Plugin plugin = pluginManager.getPlugin(pluginName.substring(1, pluginName.length()));
 
                     if (plugin != null){
-                        nonUpdatedPlugins.remove(plugin);
+                        compatibilityPlugins.remove(plugin);
                     }
                 }
             }
         } else {
-            for (String pluginName : allowedList){
+            for (String pluginName : pluginList){
                 Plugin plugin = pluginManager.getPlugin(pluginName);
 
                 if (plugin != null){
-                    nonUpdatedPlugins.add(plugin);
+                    compatibilityPlugins.add(plugin);
                 }
             }
         }
+
+        debug("The following plugins will have UUID compatibility enabled: " + Arrays.toString(compatibilityPlugins.toArray()));
+        debug("Reading plugin jar files to cache class names...");
+
+        for (Plugin plugin : Bukkit.getPluginManager().getPlugins()){
+            if (!pluginList.contains(plugin.getName())){
+                continue;
+            }
+
+            List<String> classNames = new ArrayList<>();
+            File pluginJar = Utils.getJarForPlugin(plugin);
+
+            if (pluginList.contains(plugin.getName())){
+                try {
+                    if (pluginJar.getName().endsWith(".jar")){
+                        ZipInputStream zipInputStream = new ZipInputStream(new FileInputStream(pluginJar));
+                        ZipEntry zipEntry = zipInputStream.getNextEntry();
+
+                        while (zipEntry != null){
+                            String entryName = zipEntry.getName();
+
+                            if (!zipEntry.isDirectory() && entryName.endsWith(".class")){
+                                StringBuilder className = new StringBuilder();
+
+                                for (String part : entryName.split("/")){
+                                    if (className.length() != 0){
+                                        className.append(".");
+                                    }
+
+                                    className.append(part);
+
+                                    if (part.endsWith(".class")){
+                                        className.setLength(className.length() - ".class".length());
+                                    }
+                                }
+
+                                classNames.add(className.toString());
+                            }
+
+                            zipEntry = zipInputStream.getNextEntry();
+                        }
+
+                        classNameToPluginMap.put(plugin, classNames);
+                    }
+                } catch (Throwable throwable){
+                    getLogger().severe("Error caching class names for plugin " + plugin.getName());
+                    throwable.printStackTrace();
+                }
+            }
+            }
+
+        try {
+            debug("Writing modified version of CraftHumanEntity");
+            String craftServerClassName = Bukkit.getServer().getClass().getName();
+            final String className = craftServerClassName.substring(0, craftServerClassName.length() - "CraftServer".length()) + "entity.CraftHumanEntity";
+
+            Class<?> craftServerClass = Bukkit.getServer().getClass();
+            ClassLoader classLoader = craftServerClass.getClassLoader();
+            ProtectionDomain protectionDomain = craftServerClass.getProtectionDomain();
+
+            ClassPool classPool = ClassPool.getDefault();
+            CtClass ctClass = classPool.get(className);
+            CtMethod ctMethod = ctClass.getDeclaredMethod("getName");
+
+            /**
+             * The below code creates a method to return a different name depending on a players UUID
+             * It has to be this complex as the ExternalAccess class is in a different class-loader from CraftBukkit
+             * Class names have full paths so we don't need to import anything
+             * If for some reason we are unable to get a name, it defaults to standard behavior
+             */
+            ctMethod.setBody("{ try { return (String) Class.forName(\"" + ExternalAccess.class.getName() + "\", true, " + Bukkit.class.getName() + ".getPluginManager().getPlugin(\"" + getDescription().getName() + "\").getClass().getClassLoader()).getDeclaredMethod(\"getPlayerName\", new Class[]{" + UUID.class.getName() + ".class}).invoke(null, new Object[]{getUniqueId()}); } catch (" + Throwable.class.getName() + " e) { return getHandle().getName(); } }");
+            // how was that for a one liner
+
+            debug("Compiling modified CraftHumanEntity and loading into main ClassLoader");
+            ctClass.toClass(classLoader, protectionDomain);
+            ctClass.detach();
+        } catch (Throwable throwable){
+            getLogger().severe("Error applying patch for getName() method");
+            throwable.printStackTrace();
+        }
+    }
+
+    @Override
+    public void onEnable(){
+        PluginManager pluginManager = Bukkit.getPluginManager();
+        pluginManager.registerEvents(new UUIDCompatListener(this), this);
+        pluginManager.registerEvents(this, this);
 
         if (!getRetrievesWrapper().getConfig().getBoolean("retrieved.world-data")){
             getLogger().info("Retrieving UUID <-> Names from player dat files, please wait...");
@@ -136,102 +223,17 @@ public class UUIDCompat extends JavaPlugin implements Listener {
                 getRetrievesWrapper().saveConfig();
             }
         }
-
-        getLogger().info("Reading plugin jar files to retrieve class names...");
-
-        for (Plugin plugin : Bukkit.getPluginManager().getPlugins()){
-            if (!allowedList.contains(plugin.getName())){
-                continue;
-            }
-
-            List<String> classNames = new ArrayList<>();
-            File pluginJar = Utils.getJarForPlugin(plugin);
-
-            try {
-                if (pluginJar.getName().endsWith(".jar")){
-                    ZipInputStream zipInputStream = new ZipInputStream(new FileInputStream(pluginJar));
-                    ZipEntry zipEntry = zipInputStream.getNextEntry();
-
-                    while (zipEntry != null){
-                        String entryName = zipEntry.getName();
-
-                        if (!zipEntry.isDirectory() && entryName.endsWith(".class")){
-                            StringBuilder className = new StringBuilder();
-
-                            for (String part : entryName.split("/")){
-                                if (className.length() != 0){
-                                    className.append(".");
-                                }
-
-                                className.append(part);
-
-                                if (part.endsWith(".class")){
-                                    className.setLength(className.length() - ".class".length());
-                                }
-                            }
-
-                            classNames.add(className.toString());
-                        }
-
-                        zipEntry = zipInputStream.getNextEntry();
-                    }
-
-                    classNameToPluginMap.put(plugin, classNames);
-                }
-            } catch (Throwable throwable){
-                getLogger().severe("Error caching class names for plugin " + plugin.getName());
-                throwable.printStackTrace();
-            }
-        }
-
-        try {
-            getLogger().info("Writing modified version of CraftHumanEntity");
-            String craftServerClassName = Bukkit.getServer().getClass().getName();
-            final String className = craftServerClassName.substring(0, craftServerClassName.length() - "CraftServer".length()) + "entity.CraftHumanEntity";
-
-            ClassLoader classLoader = getClass().getClassLoader();
-            Class.forName(className, true, classLoader); // init class so it can be replaced
-
-            ClassPool classPool = ClassPool.getDefault();
-
-            CtClass ctClass = classPool.get(className);
-            CtMethod ctMethod = ctClass.getDeclaredMethod("getName");
-
-            /**
-             * The below code creates a method to return a different name depending on a players UUID
-             * It has to be this complex as the ExternalAccess class is in a different class-loader from CraftBukkit
-             * Class names have full paths so we don't need to import anything
-             * If for some reason we are unable to get a name, it defaults to standard behavior
-             */
-            ctMethod.setBody("{ try { return (String) Class.forName(\"" + ExternalAccess.class.getName() + "\", true, " + Bukkit.class.getName() + ".getPluginManager().getPlugin(\"" + getDescription().getName() + "\").getClass().getClassLoader()).getDeclaredMethod(\"getPlayerName\", new Class[]{" + UUID.class.getName() + ".class}).invoke(null, new Object[]{getUniqueId()}); } catch (" + Throwable.class.getName() + " e) { return getHandle().getName(); } }");
-            // how was that for a one liner
-
-            getLogger().info("Compiling modified CraftHumanEntity to bytecode");
-            final byte[] classFile = ctClass.toBytecode();
-
-            // the below code was done in a scheduler so that the HotSwapper would use Bukkit's class-loader as there currently isn't a way to define which class-loader is used
-            Bukkit.getScheduler().runTask(this, new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        getLogger().info("HotSwapping in modified version of CraftHumanEntity");
-                        HotSwapper hotSwapper = new HotSwapper(8000);
-                        hotSwapper.reload(className, classFile);
-                    } catch (Throwable throwable){
-                        getLogger().severe("Error hot-swapping CraftHumanEntity class");
-                        throwable.printStackTrace();
-                    }
-                }
-            });
-        } catch (Throwable throwable){
-            getLogger().severe("Error applying patch for getName() method");
-            throwable.printStackTrace();
-        }
     }
 
     @Override
     public void onDisable() {
         instance = null;
+    }
+
+    public void debug(String message){
+        if (debug){
+            getLogger().info(message);
+        }
     }
 
     public String getOriginalName(Player player){
@@ -259,6 +261,7 @@ public class UUIDCompat extends JavaPlugin implements Listener {
     public String getRealName(Player player){
         UUID uuid = player.getUniqueId();
 
+        // I couldn't use metadata here instead as it makes a call to getName which results in an infinite continuous loop
         if (!playerRealNames.containsKey(uuid)){
             try {
                 Object gameProfile = player.getClass().getDeclaredMethod("getProfile").invoke(player);
@@ -291,8 +294,8 @@ public class UUIDCompat extends JavaPlugin implements Listener {
         return null;
     }
 
-    public Set<Plugin> getNonUpdatedPlugins() {
-        return nonUpdatedPlugins;
+    public Set<Plugin> getCompatibilityPlugins() {
+        return compatibilityPlugins;
     }
 
     public CustomConfigWrapper getNameMappingsWrapper() {
@@ -301,11 +304,6 @@ public class UUIDCompat extends JavaPlugin implements Listener {
 
     public CustomConfigWrapper getRetrievesWrapper() {
         return retrievesWrapper;
-    }
-
-    @EventHandler
-    public void onPlayerQuit(PlayerQuitEvent e){
-        playerRealNames.remove(e.getPlayer().getUniqueId());
     }
 
 }

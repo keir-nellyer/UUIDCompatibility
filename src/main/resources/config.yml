@@ -11,6 +11,7 @@
 #   tabList - Show original name in tab list
 #   plugins - A list of plugins which should be given UUID compatibility
 # notifyPlayers - When a player joins and their username differs from their original name, should they be notified?
+# debug - Show extra information about the plugin for debugging purposes
 
 enabled: false
 
@@ -21,3 +22,4 @@ showOriginalNameIn:
     - GriefPrevention
 
 notifyPlayers: true
+debug: false
