@@ -9,6 +9,10 @@ This plugin uses dangerous code which can potentially have negative side effects
 * **Java 7** or higher.
 * Due to the way the Reflection code is written, it should work on most recent builds of CraftBukkit.
 
+##License
+
+We're GPL v3, see [here](LICENSE)
+
 ##How is this any different from similar plugins?
 
 Unlike similar plugins, UUIDCompatibility **DOES NOT** prevent players who have changed their name from joining the server.
@@ -26,7 +30,3 @@ The plugin starts up and injects some code into a CraftBukkit class, this method
 ##Example
 
 Player #1 joins the server with the name "Notch", they then leave the server and change their name to "jeb_", when they rejoin the server, UUIDCompatibility tricks plugins you specify that "jeb_" is still called "Notch".
-
-##Why should I pay for this?
-
-There are no other plugins like this, this buys your server more time to update your plugins/wait for developers to update them. Without this, if a user changes their name, they lose all data saved by plugins not updated. Updated plugins will continue to function as intended. I spent many hours testing, updating and adding features to this plugin to get it near perfect.

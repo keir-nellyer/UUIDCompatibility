@@ -11,10 +11,10 @@ import java.util.UUID;
  */
 public class ExternalAccess {
 
-    private static UUIDCompat instance;
+    private static UUIDCompatibility instance;
 
     static {
-        instance = UUIDCompat.getInstance();
+        instance = UUIDCompatibility.getInstance();
     }
 
     /**

@@ -13,11 +13,11 @@ import org.bukkit.event.player.PlayerQuitEvent;
 /**
  * Created by iKeirNez on 29/06/2014.
  */
-public class UUIDCompatListener implements Listener {
+public class UUIDCompatibilityListener implements Listener {
 
-    private UUIDCompat instance;
+    private UUIDCompatibility instance;
 
-    public UUIDCompatListener(UUIDCompat instance){
+    public UUIDCompatibilityListener(UUIDCompatibility instance){
         this.instance = instance;
     }
 
@@ -44,7 +44,7 @@ public class UUIDCompatListener implements Listener {
         String originalName = instance.getOriginalName(player);
 
         if (instance.getConfig().getBoolean("notifyPlayers") && !pName.equals(originalName)){
-            player.sendMessage(UUIDCompat.MESSAGE_PREFIX + "Your name is " + ChatColor.GOLD + pName + ChatColor.GREEN + " however some parts of this server may refer to you as " + ChatColor.GOLD + originalName);
+            player.sendMessage(UUIDCompatibility.MESSAGE_PREFIX + "Your name is " + ChatColor.GOLD + pName + ChatColor.GREEN + " however some parts of this server may refer to you as " + ChatColor.GOLD + originalName);
         }
     }
 

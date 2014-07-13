@@ -13,9 +13,11 @@ import org.bukkit.event.Listener;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.mcstats.Metrics;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,15 +33,17 @@ import java.util.zip.ZipInputStream;
 /**
  * Created by iKeirNez on 29/06/2014.
  */
-public class UUIDCompat extends JavaPlugin implements Listener {
+public class UUIDCompatibility extends JavaPlugin implements Listener {
 
-    private static UUIDCompat instance;
+    private static UUIDCompatibility instance;
 
-    public static String MESSAGE_PREFIX = ChatColor.AQUA + "[" + ChatColor.GOLD + "UUIDCompat" + ChatColor.AQUA + "] " + ChatColor.GREEN;
+    public static String MESSAGE_PREFIX = ChatColor.AQUA + "[" + ChatColor.GOLD + "UUIDCompatibility" + ChatColor.AQUA + "] " + ChatColor.GREEN;
 
-    public static UUIDCompat getInstance() {
+    public static UUIDCompatibility getInstance() {
         return instance;
     }
+
+    private Metrics metrics;
 
     private Set<Plugin> compatibilityPlugins = new HashSet<>();
     public Map<UUID, String> playerRealNames = new HashMap<>();
@@ -57,9 +61,7 @@ public class UUIDCompat extends JavaPlugin implements Listener {
         getConfig().options().copyDefaults(true);
         saveConfig();
 
-        if (!getConfig().getBoolean("enabled")){
-            getLogger().severe("The plugin enabled status has not been set to true in the config, disabling...");
-            setEnabled(false);
+        if (!getConfig().getBoolean("enabled")){ // warning will be shown in onEnable()
             return;
         }
 
@@ -141,7 +143,7 @@ public class UUIDCompat extends JavaPlugin implements Listener {
                     throwable.printStackTrace();
                 }
             }
-            }
+        }
 
         try {
             debug("Writing modified version of CraftHumanEntity");
@@ -176,8 +178,14 @@ public class UUIDCompat extends JavaPlugin implements Listener {
 
     @Override
     public void onEnable(){
+        if (!getConfig().getBoolean("enabled")){
+            getLogger().severe("The plugin enabled status has not been set to true in the config, disabling...");
+            setEnabled(false);
+            return;
+        }
+
         PluginManager pluginManager = Bukkit.getPluginManager();
-        pluginManager.registerEvents(new UUIDCompatListener(this), this);
+        pluginManager.registerEvents(new UUIDCompatibilityListener(this), this);
         pluginManager.registerEvents(this, this);
 
         if (!getRetrievesWrapper().getConfig().getBoolean("retrieved.world-data")){
@@ -223,6 +231,20 @@ public class UUIDCompat extends JavaPlugin implements Listener {
                 getRetrievesWrapper().saveConfig();
             }
         }
+
+        try {
+            metrics = new Metrics(this);
+
+            Metrics.Graph storedGraph = metrics.createGraph("Player UUIDs <-> Names Stored");
+            storedGraph.addPlotter(new Metrics.Plotter() {
+                @Override
+                public int getValue() {
+                    return getNameMappingsWrapper().getConfig().getKeys(false).size();
+                }
+            });
+
+            metrics.start();
+        } catch (IOException e){}
     }
 
     @Override
