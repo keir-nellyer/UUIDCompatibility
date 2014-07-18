@@ -52,7 +52,7 @@ public class ExternalAccess {
             }
         }
 
-        instance.debug("Returning players real name");
+        instance.debug("Call not matched to plugin\nReturning players real name");
         return realName;
     }
 
