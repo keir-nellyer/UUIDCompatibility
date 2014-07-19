@@ -285,7 +285,7 @@ public class UUIDCompatibility extends JavaPlugin implements Listener {
             String newRealName = realName;
             int numberSuffix = 1;
 
-            while (Utils.containsValue(nameMappings, newRealName)){
+            while (nameMappings.getValues(false).containsValue(newRealName)){
                 newRealName = realName + "_" + numberSuffix++;
             }
 

@@ -1,6 +1,5 @@
 package com.ikeirnez.uuidcompatibility;
 
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -13,16 +12,6 @@ import java.lang.reflect.Method;
 public class Utils {
 
     private Utils(){}
-
-    public static boolean containsValue(ConfigurationSection section, Object value){
-        for (String key : section.getKeys(false)){
-            if (section.get(key).equals(value)){
-                return true;
-            }
-        }
-
-        return false;
-    }
 
     public static File getJarForPlugin(Plugin plugin){
         if (plugin instanceof JavaPlugin){
