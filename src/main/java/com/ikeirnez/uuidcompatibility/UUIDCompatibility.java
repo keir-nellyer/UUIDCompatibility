@@ -17,9 +17,9 @@ import org.mcstats.Metrics;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -213,25 +213,41 @@ public class UUIDCompatibility extends JavaPlugin implements Listener {
             if (essentialsPlugin != null){
                 getLogger().info("Retrieving UUID <-> Names from Essentials data, please wait...");
                 IEssentials essentials = (IEssentials) essentialsPlugin;
+                File userDataFolder = new File(essentials.getDataFolder(), "userdata/");
 
-                for (File file : new File(essentials.getDataFolder(), "userdata/").listFiles()){
-                    String fileName = file.getName();
+                if (userDataFolder.exists() && userDataFolder.isDirectory()){
+                    File[] files = userDataFolder.listFiles(new FilenameFilter() {
+                        @Override
+                        public boolean accept(File dir, String name) {
+                            return name.endsWith(".yml");
+                        }
+                    });
 
-                    if (fileName.endsWith(".yml")){
-                        try {
-                            UUID uuid = UUID.fromString(fileName.substring(0, fileName.length() - 4));
-                            String uuidString = uuid.toString();
+                    if (files != null){
+                        for (File file : files){
+                            String fileName = file.getName();
 
-                            if (!getNameMappingsWrapper().getConfig().contains(uuidString)){
-                                getNameMappingsWrapper().getConfig().set(uuidString, essentials.getUser(uuid).getLastAccountName());
+                            if (fileName.endsWith(".yml")){
+                                try {
+                                    UUID uuid = UUID.fromString(fileName.substring(0, fileName.length() - 4));
+                                    String uuidString = uuid.toString();
+
+                                    if (!getNameMappingsWrapper().getConfig().contains(uuidString)){
+                                        getNameMappingsWrapper().getConfig().set(uuidString, essentials.getUser(uuid).getLastAccountName());
+                                    }
+                                } catch (IllegalArgumentException e){}
                             }
-                        } catch (IllegalArgumentException e){}
-                    }
-                }
+                        }
 
-                getNameMappingsWrapper().saveConfig();
-                getRetrievesWrapper().getConfig().set("retrieved.essentials", true);
-                getRetrievesWrapper().saveConfig();
+                        getNameMappingsWrapper().saveConfig();
+                        getRetrievesWrapper().getConfig().set("retrieved.essentials", true);
+                        getRetrievesWrapper().saveConfig();
+                    } else {
+                        getLogger().severe("Something prevented");
+                    }
+                } else {
+                    getLogger().severe("Unable to import from Essentials due to the userdata file not existing or is not a directory");
+                }
             }
         }
 
