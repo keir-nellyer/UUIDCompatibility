@@ -162,7 +162,6 @@ public class UUIDCompatibility extends JavaPlugin implements Listener {
             ctCacheField.setModifiers(Modifier.PUBLIC | Modifier.STATIC);
             ctCacheClass.addField(ctCacheField, CtField.Initializer.byExpr("Class.forName(\"" + ExternalAccess.class.getName() + "\", true, " + Bukkit.class.getName() + ".getPluginManager().getPlugin(\"" + getDescription().getName() + "\").getClass().getClassLoader()).getDeclaredMethod(\"getPlayerName\", new Class[]{" + HumanEntity.class.getName() + ".class})"));
             ctCacheClass.toClass(Bukkit.class.getClassLoader(), Bukkit.class.getProtectionDomain());
-            ctCacheClass.detach();
 
             // hook into the getName method of CraftHumanEntity
             // in the case of this failing, print the stack trace and fallback to default methods
@@ -172,7 +171,6 @@ public class UUIDCompatibility extends JavaPlugin implements Listener {
 
             Class<?> craftServerClass = Bukkit.getServer().getClass();
             ctCraftHumanEntityClass.toClass(craftServerClass.getClassLoader(), craftServerClass.getProtectionDomain());
-            ctCraftHumanEntityClass.detach();
         } catch (Throwable throwable){
             getLogger().severe("Error whilst injecting code");
             throwable.printStackTrace();
