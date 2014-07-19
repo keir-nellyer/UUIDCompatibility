@@ -2,7 +2,6 @@ package com.ikeirnez.uuidcompatibility;
 
 import javassist.*;
 import net.ess3.api.IEssentials;
-import net.minecraft.util.io.netty.util.internal.ConcurrentSet;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
@@ -20,12 +19,7 @@ import java.io.FileInputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -51,7 +45,7 @@ public class UUIDCompatibility extends JavaPlugin implements Listener {
 
     private Metrics metrics;
 
-    private Set<Plugin> compatibilityPlugins = new ConcurrentSet<>();
+    private Set<Plugin> compatibilityPlugins = Collections.newSetFromMap(new ConcurrentHashMap<Plugin, Boolean>()); // clunky, I know, but the only way as far as I'm aware
     public Map<UUID, String> playerRealNames = new ConcurrentHashMap<>();
     private Map<Plugin, List<String>> classNameToPluginMap = new ConcurrentHashMap<>();
     private CustomConfigWrapper nameMappingsWrapper, retrievesWrapper;
