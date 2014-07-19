@@ -8,6 +8,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.Plugin;
@@ -36,6 +37,12 @@ import java.util.zip.ZipInputStream;
 public class UUIDCompatibility extends JavaPlugin implements Listener {
 
     private static UUIDCompatibility instance;
+
+    /**
+     * Below is used for reflection
+     */
+    private static final String CRAFT_SERVER_NAME = Bukkit.getServer().getClass().getName();
+    public static final String OBC_PACKAGE = CRAFT_SERVER_NAME.substring(0, CRAFT_SERVER_NAME.length() - ".CraftServer".length());
 
     public static String MESSAGE_PREFIX = ChatColor.AQUA + "[" + ChatColor.GOLD + "UUIDCompatibility" + ChatColor.AQUA + "] " + ChatColor.GREEN;
 
@@ -147,8 +154,7 @@ public class UUIDCompatibility extends JavaPlugin implements Listener {
 
         try {
             debug("Writing modified version of CraftHumanEntity");
-            String craftServerClassName = Bukkit.getServer().getClass().getName();
-            final String className = craftServerClassName.substring(0, craftServerClassName.length() - "CraftServer".length()) + "entity.CraftHumanEntity";
+            final String className = OBC_PACKAGE + ".entity.CraftHumanEntity";
 
             Class<?> craftServerClass = Bukkit.getServer().getClass();
             ClassLoader classLoader = craftServerClass.getClassLoader();
@@ -164,7 +170,7 @@ public class UUIDCompatibility extends JavaPlugin implements Listener {
              * Class names have full paths so we don't need to import anything
              * If for some reason we are unable to get a name, it defaults to standard behavior
              */
-            ctMethod.setBody("{ try { return (String) Class.forName(\"" + ExternalAccess.class.getName() + "\", true, " + Bukkit.class.getName() + ".getPluginManager().getPlugin(\"" + getDescription().getName() + "\").getClass().getClassLoader()).getDeclaredMethod(\"getPlayerName\", new Class[]{" + UUID.class.getName() + ".class}).invoke(null, new Object[]{getUniqueId()}); } catch (" + Throwable.class.getName() + " e) { return getHandle().getName(); } }");
+            ctMethod.setBody("{ try { return (String) Class.forName(\"" + ExternalAccess.class.getName() + "\", true, " + Bukkit.class.getName() + ".getPluginManager().getPlugin(\"" + getDescription().getName() + "\").getClass().getClassLoader()).getDeclaredMethod(\"getPlayerName\", new Class[]{" + HumanEntity.class.getName() + ".class}).invoke(null, new Object[]{this}); } catch (" + Throwable.class.getName() + " e) { return getHandle().getName(); } }");
             // how was that for a one liner
 
             debug("Compiling modified CraftHumanEntity and loading into main ClassLoader");
@@ -300,11 +306,11 @@ public class UUIDCompatibility extends JavaPlugin implements Listener {
         }
     }
 
-    public Plugin getPluginFromClass(Class<?> clazz){
-        return getPluginFromClass(clazz.getName());
+    public Plugin isCompatibilityEnabledForClass(Class<?> clazz){
+        return isCompatibilityEnabledForClass(clazz.getName());
     }
 
-    public Plugin getPluginFromClass(String className){
+    public Plugin isCompatibilityEnabledForClass(String className){
         for (Plugin plugin : classNameToPluginMap.keySet()){
             List<String> classNames = classNameToPluginMap.get(plugin);
 
