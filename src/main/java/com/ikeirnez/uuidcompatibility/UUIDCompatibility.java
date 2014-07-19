@@ -1,9 +1,8 @@
 package com.ikeirnez.uuidcompatibility;
 
-import javassist.ClassPool;
-import javassist.CtClass;
-import javassist.CtMethod;
+import javassist.*;
 import net.ess3.api.IEssentials;
+import net.minecraft.util.io.netty.util.internal.ConcurrentSet;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
@@ -19,15 +18,15 @@ import org.mcstats.Metrics;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -52,9 +51,9 @@ public class UUIDCompatibility extends JavaPlugin implements Listener {
 
     private Metrics metrics;
 
-    private Set<Plugin> compatibilityPlugins = new HashSet<>();
-    public Map<UUID, String> playerRealNames = new HashMap<>();
-    private Map<Plugin, List<String>> classNameToPluginMap = new HashMap<>();
+    private Set<Plugin> compatibilityPlugins = new ConcurrentSet<>();
+    public Map<UUID, String> playerRealNames = new ConcurrentHashMap<>();
+    private Map<Plugin, List<String>> classNameToPluginMap = new ConcurrentHashMap<>();
     private CustomConfigWrapper nameMappingsWrapper, retrievesWrapper;
     private boolean debug = false;
 
@@ -153,31 +152,29 @@ public class UUIDCompatibility extends JavaPlugin implements Listener {
         }
 
         try {
-            debug("Writing modified version of CraftHumanEntity");
-            final String className = OBC_PACKAGE + ".entity.CraftHumanEntity";
+            debug("Injecting code");
+            ClassPool classPool = ClassPool.getDefault();
+
+            // create class used for containing a reference to the getName method in ExternalAccess, this saves us getting it every time
+            // this is effective as the getName() method is run A LOT, especially with certain plugins
+            CtClass ctCacheClass = classPool.makeClass("com.ikeirnez.uuidcompatibility.hax.UUIDCompatibilityMethodCache");
+            CtField ctCacheField = new CtField(classPool.get(Method.class.getName()), "GET_NAME_METHOD", ctCacheClass);
+            ctCacheField.setModifiers(Modifier.PUBLIC | Modifier.STATIC);
+            ctCacheClass.addField(ctCacheField, CtField.Initializer.byExpr("Class.forName(\"" + ExternalAccess.class.getName() + "\", true, " + Bukkit.class.getName() + ".getPluginManager().getPlugin(\"" + getDescription().getName() + "\").getClass().getClassLoader()).getDeclaredMethod(\"getPlayerName\", new Class[]{" + HumanEntity.class.getName() + ".class})"));
+            ctCacheClass.toClass(Bukkit.class.getClassLoader(), Bukkit.class.getProtectionDomain());
+            ctCacheClass.detach();
+
+            // hook into the getName method of CraftHumanEntity
+            // in the case of this failing, print the stack trace and fallback to default methods
+            CtClass ctCraftHumanEntityClass = classPool.get(OBC_PACKAGE + ".entity.CraftHumanEntity");
+            CtMethod ctGetNameMethod = ctCraftHumanEntityClass.getDeclaredMethod("getName");
+            ctGetNameMethod.setBody("{ try { return (String) com.ikeirnez.uuidcompatibility.hax.UUIDCompatibilityMethodCache.GET_NAME_METHOD.invoke(null, new Object[]{this}); } catch (" + Throwable.class.getName() + " e) { e.printStackTrace(); return getHandle().getName(); } }");
 
             Class<?> craftServerClass = Bukkit.getServer().getClass();
-            ClassLoader classLoader = craftServerClass.getClassLoader();
-            ProtectionDomain protectionDomain = craftServerClass.getProtectionDomain();
-
-            ClassPool classPool = ClassPool.getDefault();
-            CtClass ctClass = classPool.get(className);
-            CtMethod ctMethod = ctClass.getDeclaredMethod("getName");
-
-            /**
-             * The below code creates a method to return a different name depending on a players UUID
-             * It has to be this complex as the ExternalAccess class is in a different class-loader from CraftBukkit
-             * Class names have full paths so we don't need to import anything
-             * If for some reason we are unable to get a name, it defaults to standard behavior
-             */
-            ctMethod.setBody("{ try { return (String) Class.forName(\"" + ExternalAccess.class.getName() + "\", true, " + Bukkit.class.getName() + ".getPluginManager().getPlugin(\"" + getDescription().getName() + "\").getClass().getClassLoader()).getDeclaredMethod(\"getPlayerName\", new Class[]{" + HumanEntity.class.getName() + ".class}).invoke(null, new Object[]{this}); } catch (" + Throwable.class.getName() + " e) { return getHandle().getName(); } }");
-            // how was that for a one liner
-
-            debug("Compiling modified CraftHumanEntity and loading into main ClassLoader");
-            ctClass.toClass(classLoader, protectionDomain);
-            ctClass.detach();
+            ctCraftHumanEntityClass.toClass(craftServerClass.getClassLoader(), craftServerClass.getProtectionDomain());
+            ctCraftHumanEntityClass.detach();
         } catch (Throwable throwable){
-            getLogger().severe("Error applying patch for getName() method");
+            getLogger().severe("Error whilst injecting code");
             throwable.printStackTrace();
         }
     }
