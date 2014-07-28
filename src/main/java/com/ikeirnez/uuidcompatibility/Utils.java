@@ -27,4 +27,13 @@ public class Utils {
         return null;
     }
 
+    public static boolean classExists(String className){
+        try {
+            Class clazz = Class.forName(className);
+            return clazz != null; // probably isn't needed, could probably get away with "true"
+        } catch (ClassNotFoundException e){
+            return false;
+        }
+    }
+
 }
