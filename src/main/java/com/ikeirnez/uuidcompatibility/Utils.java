@@ -29,7 +29,7 @@ public class Utils {
 
     public static boolean classExists(String className){
         try {
-            Class clazz = Class.forName(className);
+            Class clazz = Class.forName(className, false, Utils.class.getClassLoader()); // the false is important, prevents it getting initialized and throwing errors on reloads
             return clazz != null; // probably isn't needed, could probably get away with "true"
         } catch (ClassNotFoundException e){
             return false;

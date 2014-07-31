@@ -53,6 +53,35 @@ public class UUIDCompatibility extends JavaPlugin implements Listener {
 
     {
         instance = this;
+
+        if (!Utils.classExists("com.ikeirnez.uuidcompatibility.hax.UUIDCompatibilityMethodCache")){
+            try {
+                debug("Injecting code");
+                ClassPool classPool = ClassPool.getDefault();
+
+                // create class used for containing a reference to the getName method in ExternalAccess, this saves us getting it every time
+                // this is effective as the getName() method is run A LOT, especially with certain plugins
+                CtClass ctCacheClass = classPool.makeClass("com.ikeirnez.uuidcompatibility.hax.UUIDCompatibilityMethodCache");
+                CtField ctCacheField = new CtField(classPool.get(Method.class.getName()), "GET_NAME_METHOD", ctCacheClass);
+                ctCacheField.setModifiers(Modifier.PUBLIC | Modifier.STATIC);
+                ctCacheClass.addField(ctCacheField, CtField.Initializer.byExpr("Class.forName(\"" + ExternalAccess.class.getName() + "\", true, " + Bukkit.class.getName() + ".getPluginManager().getPlugin(\"" + getDescription().getName() + "\").getClass().getClassLoader()).getDeclaredMethod(\"getPlayerName\", new Class[]{" + HumanEntity.class.getName() + ".class})"));
+                ctCacheClass.toClass(Bukkit.class.getClassLoader(), Bukkit.class.getProtectionDomain());
+
+                // hook into the getName method of CraftHumanEntity
+                // in the case of this failing, print the stack trace and fallback to default methods
+                CtClass ctCraftHumanEntityClass = classPool.get(OBC_PACKAGE + ".entity.CraftHumanEntity");
+                CtMethod ctGetNameMethod = ctCraftHumanEntityClass.getDeclaredMethod("getName");
+                ctGetNameMethod.setBody("{ try { return (String) com.ikeirnez.uuidcompatibility.hax.UUIDCompatibilityMethodCache.GET_NAME_METHOD.invoke(null, new Object[]{this}); } catch (" + Throwable.class.getName() + " e) { e.printStackTrace(); return getHandle().getName(); } }");
+
+                Class<?> craftServerClass = Bukkit.getServer().getClass();
+                ctCraftHumanEntityClass.toClass(craftServerClass.getClassLoader(), craftServerClass.getProtectionDomain());
+            } catch (Throwable throwable){
+                getLogger().severe("Error whilst injecting code");
+                throwable.printStackTrace();
+            }
+        } else {
+            debug("Skipping injection, already injected");
+        }
     }
 
     @Override
@@ -143,35 +172,6 @@ public class UUIDCompatibility extends JavaPlugin implements Listener {
                     throwable.printStackTrace();
                 }
             }
-        }
-
-        if (!Utils.classExists("com.ikeirnez.uuidcompatibility.hax.UUIDCompatibilityMethodCache")){
-            try {
-                debug("Injecting code");
-                ClassPool classPool = ClassPool.getDefault();
-
-                // create class used for containing a reference to the getName method in ExternalAccess, this saves us getting it every time
-                // this is effective as the getName() method is run A LOT, especially with certain plugins
-                CtClass ctCacheClass = classPool.makeClass("com.ikeirnez.uuidcompatibility.hax.UUIDCompatibilityMethodCache");
-                CtField ctCacheField = new CtField(classPool.get(Method.class.getName()), "GET_NAME_METHOD", ctCacheClass);
-                ctCacheField.setModifiers(Modifier.PUBLIC | Modifier.STATIC);
-                ctCacheClass.addField(ctCacheField, CtField.Initializer.byExpr("Class.forName(\"" + ExternalAccess.class.getName() + "\", true, " + Bukkit.class.getName() + ".getPluginManager().getPlugin(\"" + getDescription().getName() + "\").getClass().getClassLoader()).getDeclaredMethod(\"getPlayerName\", new Class[]{" + HumanEntity.class.getName() + ".class})"));
-                ctCacheClass.toClass(Bukkit.class.getClassLoader(), Bukkit.class.getProtectionDomain());
-
-                // hook into the getName method of CraftHumanEntity
-                // in the case of this failing, print the stack trace and fallback to default methods
-                CtClass ctCraftHumanEntityClass = classPool.get(OBC_PACKAGE + ".entity.CraftHumanEntity");
-                CtMethod ctGetNameMethod = ctCraftHumanEntityClass.getDeclaredMethod("getName");
-                ctGetNameMethod.setBody("{ try { return (String) com.ikeirnez.uuidcompatibility.hax.UUIDCompatibilityMethodCache.GET_NAME_METHOD.invoke(null, new Object[]{this}); } catch (" + Throwable.class.getName() + " e) { e.printStackTrace(); return getHandle().getName(); } }");
-
-                Class<?> craftServerClass = Bukkit.getServer().getClass();
-                ctCraftHumanEntityClass.toClass(craftServerClass.getClassLoader(), craftServerClass.getProtectionDomain());
-            } catch (Throwable throwable){
-                getLogger().severe("Error whilst injecting code");
-                throwable.printStackTrace();
-            }
-        } else {
-            debug("Skipping injection, already injected");
         }
     }
 
