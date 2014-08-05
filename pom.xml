@@ -55,6 +55,7 @@
                                     <include>org.mcstats.bukkit:metrics</include>
                                 </includes>
                             </artifactSet>
+                            <minimizeJar>true</minimizeJar>
                         </configuration>
                     </execution>
                 </executions>
