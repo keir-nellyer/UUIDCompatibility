@@ -5,12 +5,8 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.ikeirnez</groupId>
     <artifactId>UUIDCompatibility</artifactId>
-    <version>2.13-SNAPSHOT</version>
+    <version>2.14</version>
     <repositories>
-        <repository>
-            <id>bukkit-repo</id>
-            <url>http://repo.bukkit.org/content/groups/public/</url>
-        </repository>
         <repository>
             <id>ess-repo</id>
             <url>http://repo.ess3.net/content/groups/public</url>
@@ -64,10 +60,11 @@
     </build>
     <dependencies>
         <dependency>
-            <groupId>org.bukkit</groupId>
-            <artifactId>craftbukkit</artifactId>
-            <scope>provided</scope>
-            <version>1.7.9-R0.3-SNAPSHOT</version>
+            <groupId>org.spigotmc</groupId>
+            <artifactId>spigot-server</artifactId>
+            <scope>system</scope>
+            <version>1.8-R0.1-SNAPSHOT</version>
+            <systemPath>${project.basedir}/libraries/spigot-1.8.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>net.ess3</groupId>

@@ -119,6 +119,11 @@ public class UUIDCompatibility extends JavaPlugin implements Listener {
                 Plugin plugin = pluginManager.getPlugin(pluginName);
 
                 if (plugin != null){
+                    if (plugin == this){
+                        getLogger().warning("Nice try, but UUIDCompatibility cannot be enabled for the plugin \"UUIDCompatibility\"");
+                        continue;
+                    }
+
                     compatibilityPlugins.add(plugin);
                 }
             }

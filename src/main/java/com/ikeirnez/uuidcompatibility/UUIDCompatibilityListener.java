@@ -26,13 +26,13 @@ public class UUIDCompatibilityListener implements Listener {
         FileConfiguration configuration = instance.getConfig();
 
         Player player = e.getPlayer();
-        String pName = player.getName();
+        String pName = instance.getOriginalName(player);
 
-        if (configuration.getBoolean("showOriginalNameIn.DisplayName")){
+        if (configuration.getBoolean("showOriginalNameIn.displayName")){
             player.setDisplayName(pName);
         }
 
-        if (configuration.getBoolean("showOriginalNameIn.TabList")){
+        if (configuration.getBoolean("showOriginalNameIn.tabList")){
             player.setPlayerListName(pName);
         }
     }
