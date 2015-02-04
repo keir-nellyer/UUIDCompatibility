@@ -1,10 +1,14 @@
 package com.ikeirnez.uuidcompatibility;
 
+import com.ikeirnez.uuidcompatibility.commands.MainCommand;
+import com.ikeirnez.uuidcompatibility.utils.CustomConfigWrapper;
+import com.ikeirnez.uuidcompatibility.utils.Utils;
 import javassist.*;
 import net.ess3.api.IEssentials;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
@@ -86,7 +90,6 @@ public class UUIDCompatibility extends JavaPlugin implements Listener {
 
     @Override
     public void onLoad() {
-        PluginManager pluginManager = Bukkit.getPluginManager();
         getConfig().options().copyDefaults(true);
         saveConfig();
 
@@ -98,6 +101,13 @@ public class UUIDCompatibility extends JavaPlugin implements Listener {
         debug("Debugging is now enabled");
         nameMappingsWrapper = new CustomConfigWrapper(new File(getDataFolder(), "nameMappings.yml"));
         retrievesWrapper = new CustomConfigWrapper(new File(getDataFolder(), "retrieves.yml"));
+
+        loadCompatibilityPlugin();
+    }
+
+    public void loadCompatibilityPlugin(){
+        PluginManager pluginManager = Bukkit.getPluginManager();
+        compatibilityPlugins.clear();
 
         debug("Calculating plugins to enable UUID compatibility for");
         List<String> pluginList = getConfig().getStringList("showOriginalNameIn.plugins");
@@ -120,7 +130,7 @@ public class UUIDCompatibility extends JavaPlugin implements Listener {
 
                 if (plugin != null){
                     if (plugin == this){
-                        getLogger().warning("Nice try, but UUIDCompatibility cannot be enabled for the plugin \"UUIDCompatibility\"");
+                        getLogger().warning("Nice try, but compatibility cannot be enabled for the plugin \"UUIDCompatibility\"");
                         continue;
                     }
 
@@ -192,6 +202,29 @@ public class UUIDCompatibility extends JavaPlugin implements Listener {
         pluginManager.registerEvents(new UUIDCompatibilityListener(this), this);
         pluginManager.registerEvents(this, this);
 
+        PluginCommand command = getCommand("uuidcompatibility");
+        MainCommand mainCommand = new MainCommand(this);
+        command.setExecutor(mainCommand);
+        command.setTabCompleter(mainCommand);
+
+        importData();
+
+        try {
+            metrics = new Metrics(this);
+
+            Metrics.Graph storedGraph = metrics.createGraph("Player UUIDs <-> Names Stored");
+            storedGraph.addPlotter(new Metrics.Plotter() {
+                @Override
+                public int getValue() {
+                    return getNameMappingsWrapper().getConfig().getKeys(false).size();
+                }
+            });
+
+            metrics.start();
+        } catch (IOException e){}
+    }
+
+    public void importData(){
         if (!getRetrievesWrapper().getConfig().getBoolean("retrieved.world-data")){
             getLogger().info("Retrieving UUID <-> Names from player dat files, please wait...");
 
@@ -251,20 +284,6 @@ public class UUIDCompatibility extends JavaPlugin implements Listener {
                 }
             }
         }
-
-        try {
-            metrics = new Metrics(this);
-
-            Metrics.Graph storedGraph = metrics.createGraph("Player UUIDs <-> Names Stored");
-            storedGraph.addPlotter(new Metrics.Plotter() {
-                @Override
-                public int getValue() {
-                    return getNameMappingsWrapper().getConfig().getKeys(false).size();
-                }
-            });
-
-            metrics.start();
-        } catch (IOException e){}
     }
 
     @Override
@@ -334,6 +353,27 @@ public class UUIDCompatibility extends JavaPlugin implements Listener {
         }
 
         return null;
+    }
+
+    public void refreshDisplayNames(Player player, boolean join){
+        String pName = player.getName();
+        String originalName = null; // cache original name when used, prevents this being fetched twice
+
+        if (getConfig().getBoolean("showOriginalNameIn.displayName")){
+            player.setDisplayName(pName);
+        } else if (!join){
+            player.setDisplayName(originalName = getOriginalName(player));
+        }
+
+        if (getConfig().getBoolean("showOriginalNameIn.tabList")){
+            player.setPlayerListName(pName);
+        } else if (!join){
+            if (originalName == null){
+                originalName = getOriginalName(player);
+            }
+
+            player.setPlayerListName(originalName);
+        }
     }
 
     public Set<Plugin> getCompatibilityPlugins() {

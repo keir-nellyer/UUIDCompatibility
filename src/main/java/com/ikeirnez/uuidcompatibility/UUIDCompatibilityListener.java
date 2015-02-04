@@ -1,7 +1,6 @@
 package com.ikeirnez.uuidcompatibility;
 
 import org.bukkit.ChatColor;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -23,18 +22,8 @@ public class UUIDCompatibilityListener implements Listener {
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerLogin(PlayerLoginEvent e){
-        FileConfiguration configuration = instance.getConfig();
-
         Player player = e.getPlayer();
-        String pName = instance.getOriginalName(player);
-
-        if (configuration.getBoolean("showOriginalNameIn.displayName")){
-            player.setDisplayName(pName);
-        }
-
-        if (configuration.getBoolean("showOriginalNameIn.tabList")){
-            player.setPlayerListName(pName);
-        }
+        instance.refreshDisplayNames(player, true);
     }
 
     @EventHandler

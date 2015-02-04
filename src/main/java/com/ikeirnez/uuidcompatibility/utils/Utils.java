@@ -1,5 +1,8 @@
-package com.ikeirnez.uuidcompatibility;
+package com.ikeirnez.uuidcompatibility.utils;
 
+import org.bukkit.ChatColor;
+import org.bukkit.command.CommandSender;
+import org.bukkit.permissions.Permission;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -34,6 +37,16 @@ public class Utils {
         } catch (ClassNotFoundException e){
             return false;
         }
+    }
+
+    public static boolean hasPermission(CommandSender commandSender, Permission permission){
+        boolean hasPermission = commandSender.hasPermission(permission);
+
+        if (!hasPermission){
+            commandSender.sendMessage(ChatColor.RED + "You don't have permission to do that.");
+        }
+
+        return hasPermission;
     }
 
 }

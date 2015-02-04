@@ -3,3 +3,8 @@ version: ${project.version}
 author: iKeirNez
 softdepend: [Essentials]
 main: com.ikeirnez.uuidcompatibility.UUIDCompatibility
+commands:
+  uuidcompatibility:
+    description: Main UUIDCompatibility command
+    usage: /<command> [reload]
+    aliases: [uuidcompat]

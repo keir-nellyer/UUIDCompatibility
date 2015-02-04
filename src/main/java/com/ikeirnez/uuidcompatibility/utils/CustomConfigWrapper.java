@@ -1,4 +1,4 @@
-package com.ikeirnez.uuidcompatibility;
+package com.ikeirnez.uuidcompatibility.utils;
 
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
