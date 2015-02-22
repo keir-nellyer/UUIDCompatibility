@@ -38,8 +38,8 @@ public class UUIDCompatibility extends JavaPlugin implements Listener {
     /**
      * Below is used for reflection
      */
-    public static final String CRAFT_SERVER_NAME = Bukkit.getServer().getClass().getName();
-    public static final String OBC_PACKAGE = CRAFT_SERVER_NAME.substring(0, CRAFT_SERVER_NAME.length() - ".CraftServer".length());
+    public static final String CRAFT_SERVER_CLASS_NAME = Bukkit.getServer().getClass().getName();
+    public static final String OBC_PACKAGE = CRAFT_SERVER_CLASS_NAME.substring(0, CRAFT_SERVER_CLASS_NAME.length() - ".CraftServer".length());
     public static final String HUMAN_ENTITY_CLASS = OBC_PACKAGE + ".entity.CraftHumanEntity";
 
     public static String MESSAGE_PREFIX = ChatColor.AQUA + "[" + ChatColor.GOLD + "UUIDCompatibility" + ChatColor.AQUA + "] " + ChatColor.GREEN;

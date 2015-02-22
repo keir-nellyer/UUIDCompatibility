@@ -1,5 +1,6 @@
 package com.ikeirnez.uuidcompatibility;
 
+import org.bukkit.Bukkit;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
@@ -49,7 +50,18 @@ public class ExternalAccess {
             callingElement = stackTraceElements[i];
 
             if (callingElement.getClassName().equals(UUIDCompatibility.HUMAN_ENTITY_CLASS)){
-                callingElement = stackTraceElements[i + 1];
+                callingElement = stackTraceElements[i++];
+
+                // if getPlayer call, find root caller
+                StackTraceElement higherElement = stackTraceElements[i++];
+                if (higherElement.getClassName().equals(UUIDCompatibility.CRAFT_SERVER_CLASS_NAME) && (higherElement.getMethodName().equals("getPlayer") || higherElement.getMethodName().equals("getPlayerExact"))){
+                    callingElement = stackTraceElements[i++];
+
+                    if (callingElement.getClassName().equals(Bukkit.class.getName()) && (callingElement.getMethodName().equals("getPlayer") || callingElement.getMethodName().equals("getPlayerExact"))){
+                        callingElement = stackTraceElements[i++];
+                    }
+                }
+
                 break;
             }
         }
