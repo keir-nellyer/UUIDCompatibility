@@ -5,6 +5,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
 import java.lang.reflect.Method;
+import java.util.logging.Logger;
 
 /**
  * Created by iKeirNez on 30/06/2014.
@@ -22,6 +23,7 @@ public class ExternalAccess {
      * CRITICAL - Player.getName() ABSOLUTELY CANNOT be used inside this method, it will result in a infinite continuous loop
      */
     public static String getPlayerName(HumanEntity humanEntity){
+        instance.debug("-------------------------------------------");
         instance.debug("Detected getName() usage");
 
         if (!(humanEntity instanceof Player)){
@@ -41,10 +43,19 @@ public class ExternalAccess {
         }
 
         StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
+        StackTraceElement callingElement = null;
 
-        for (int i = stackTraceElements.length - 1; i >= 0; i--){
-            StackTraceElement stackTraceElement = stackTraceElements[i];
-            String className = stackTraceElement.getClassName();
+        for (int i = 0; i < stackTraceElements.length; i++){
+            callingElement = stackTraceElements[i];
+
+            if (callingElement.getClassName().equals(UUIDCompatibility.HUMAN_ENTITY_CLASS)){
+                callingElement = stackTraceElements[i + 1];
+                break;
+            }
+        }
+
+        if (callingElement != null){ // should never be null, but just in case
+            String className = callingElement.getClassName();
             Plugin plugin = instance.isCompatibilityEnabledForClass(className);
 
             if (plugin != null){
@@ -52,6 +63,17 @@ public class ExternalAccess {
                 instance.debug("Returning players original name");
                 return originalName;
             }
+        } else {
+            Logger logger = instance.getLogger();
+            logger.severe("Couldn't find calling class, stacktrace dump:");
+
+            for (StackTraceElement stackTraceElement : stackTraceElements){
+                logger.severe(stackTraceElement.toString());
+            }
+
+            logger.severe("Will return real name");
+            logger.severe("----------------------------");
+            return realName;
         }
 
         instance.debug("Call was made internally/from plugin with UUID compatibility disabled");

@@ -38,8 +38,9 @@ public class UUIDCompatibility extends JavaPlugin implements Listener {
     /**
      * Below is used for reflection
      */
-    private static final String CRAFT_SERVER_NAME = Bukkit.getServer().getClass().getName();
+    public static final String CRAFT_SERVER_NAME = Bukkit.getServer().getClass().getName();
     public static final String OBC_PACKAGE = CRAFT_SERVER_NAME.substring(0, CRAFT_SERVER_NAME.length() - ".CraftServer".length());
+    public static final String HUMAN_ENTITY_CLASS = OBC_PACKAGE + ".entity.CraftHumanEntity";
 
     public static String MESSAGE_PREFIX = ChatColor.AQUA + "[" + ChatColor.GOLD + "UUIDCompatibility" + ChatColor.AQUA + "] " + ChatColor.GREEN;
 
@@ -73,7 +74,7 @@ public class UUIDCompatibility extends JavaPlugin implements Listener {
 
                 // hook into the getName method of CraftHumanEntity
                 // in the case of this failing, print the stack trace and fallback to default methods
-                CtClass ctCraftHumanEntityClass = classPool.get(OBC_PACKAGE + ".entity.CraftHumanEntity");
+                CtClass ctCraftHumanEntityClass = classPool.get(HUMAN_ENTITY_CLASS);
                 CtMethod ctGetNameMethod = ctCraftHumanEntityClass.getDeclaredMethod("getName");
                 ctGetNameMethod.setBody("{ try { return (String) com.ikeirnez.uuidcompatibility.hax.UUIDCompatibilityMethodCache.GET_NAME_METHOD.invoke(null, new Object[]{this}); } catch (" + Throwable.class.getName() + " e) { e.printStackTrace(); return getHandle().getName(); } }");
 
@@ -114,6 +115,7 @@ public class UUIDCompatibility extends JavaPlugin implements Listener {
 
         if (pluginList.contains("*")){
             compatibilityPlugins.addAll(Arrays.asList(pluginManager.getPlugins()));
+            compatibilityPlugins.remove(this); // don't enable compatibility for our own plugin
 
             for (String pluginName : pluginList){
                 if (pluginName.startsWith("-")){
@@ -150,7 +152,7 @@ public class UUIDCompatibility extends JavaPlugin implements Listener {
             List<String> classNames = new ArrayList<>();
             File pluginJar = Utils.getJarForPlugin(plugin);
 
-            if (pluginList.contains(plugin.getName())){
+            if (compatibilityPlugins.contains(plugin)){
                 try {
                     if (pluginJar.getName().endsWith(".jar")){
                         ZipInputStream zipInputStream = new ZipInputStream(new FileInputStream(pluginJar));
@@ -344,11 +346,9 @@ public class UUIDCompatibility extends JavaPlugin implements Listener {
     }
 
     public Plugin isCompatibilityEnabledForClass(String className){
-        for (Plugin plugin : classNameToPluginMap.keySet()){
-            List<String> classNames = classNameToPluginMap.get(plugin);
-
-            if (classNames.contains(className)){
-                return plugin;
+        for (Map.Entry<Plugin, List<String>> entry : classNameToPluginMap.entrySet()){
+            if (entry.getValue().contains(className)){
+                return entry.getKey();
             }
         }
 
@@ -360,19 +360,19 @@ public class UUIDCompatibility extends JavaPlugin implements Listener {
         String originalName = null; // cache original name when used, prevents this being fetched twice
 
         if (getConfig().getBoolean("showOriginalNameIn.displayName")){
-            player.setDisplayName(pName);
-        } else if (!join){
             player.setDisplayName(originalName = getOriginalName(player));
+        } else if (!join){
+            player.setDisplayName(pName);
         }
 
         if (getConfig().getBoolean("showOriginalNameIn.tabList")){
-            player.setPlayerListName(pName);
-        } else if (!join){
             if (originalName == null){
                 originalName = getOriginalName(player);
             }
 
             player.setPlayerListName(originalName);
+        } else if (!join){
+            player.setPlayerListName(pName);
         }
     }
 
